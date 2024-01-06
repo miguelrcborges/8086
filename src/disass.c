@@ -26,30 +26,46 @@ int main(int argc, char **argv) {
 		switch (buf[i] >> 1) {
 			case IMD_MEMREG: {
 				u8 is_wide = buf[i] & 1;
+				i++;
 				u8 mod = buf[i] >> 6;
 				u16 v;
-				i++;
 				switch (mod) {
 					case 0b11: {
+						char *width;
 						if (is_wide) {
 							v = buf[i+1] + ((int)buf[i+2] << 8);
-							printf("mov %s, %hu", regNames[is_wide][buf[i]&0b111], v);
+							width = "word";
 							i += 2;
+						} else {
+							v = buf[i+1];
+							width = "byte";
+							if (v & (1 << 7)) {
+								v |= ((1 << 8) - 1) << 8;
+							}
+							width = "byte";
+							i += 1;
 						}
+						printf("mov %s, %s %hu\n", regNames[is_wide][buf[i]&0b111], width, v);
 						break;
 					}
 					case 0b00: {
 						if ((buf[i] & 0b111) == 0b110) {
 							u16 address = buf[i+1] + ((int)buf[i+2] << 8);
+							char *width;
 							i += 2;
 							if (is_wide) {
 								v = buf[i+1] + ((int)buf[i+2] << 8);
+								width = "word";
 								i += 2;
 							} else {
 								v = buf[i+1];
+								if (v & (1 << 7)) {
+									v |= ((1 << 8) - 1) << 8;
+								}
+								width = "byte";
 								i += 1;
 							}
-							printf("mov [%hu], %hu\n", address, v);
+							printf("mov [%hu], %s %hu\n", address, width, v);
 							break;
 						}
 						if (is_wide) {
@@ -57,6 +73,9 @@ int main(int argc, char **argv) {
 							i += 2;
 						} else {
 							v = buf[i+1];
+							if (v & (1 << 7)) {
+								v |= ((1 << 8) - 1) << 8;
+							}
 							i += 1;
 						}
 						printf("mov [%s], %hu\n", displacementBases[buf[i]&0b111], v);
@@ -64,15 +83,18 @@ int main(int argc, char **argv) {
 					}
 					default: {
 						i16 dis;
+						char *width;
 						char *disbase = displacementBases[buf[i]&0b111];
 						if (mod == 0b10) {
 							dis = buf[i+1] + ((int)buf[i+2] << 8);
+							width = "word";
 							i += 2;
 						} else {
 							dis = buf[i+1];
+							width = "byte";
 							i += 1;
-							if (dis & 0b1000) {
-								dis |= 0b1111 << 4;
+							if (dis & (1 << 7)) {
+								dis |= ((1 << 8) - 1) << 8;
 							}
 						}
 						if (is_wide) {
@@ -80,12 +102,15 @@ int main(int argc, char **argv) {
 							i += 2;
 						} else {
 							v = buf[i+1];
+							if (v & (1 << 7)) {
+								v |= ((1 << 8) - 1) << 8;
+							}
 							i += 1;
 						}
 						if (dis != 0) {
-							printf("mov [%s + %hd], %hu\n", disbase, dis, v);
+							printf("mov [%s + %hd], %s %hu\n", disbase, dis, width, v);
 						} else {
-							printf("mov [%s], %hu\n", disbase, dis);
+							printf("mov [%s], %s %hu\n", disbase, width, dis);
 						}
 					}
 				}
@@ -93,26 +118,28 @@ int main(int argc, char **argv) {
 			}
 
 			case MEM_ACM: {
+				i16 v = buf[i+1] + ((int)buf[i+2] << 8);
 				if (buf[i] & 1) {
-					u16 v = buf[i+1] + ((int)buf[i+2] << 8);
-					printf("mov ax, [%huu]", v);
 					i += 2;
 				} else {
 					u8 v = buf[i+1];
-					printf("mov ah, [%hhu]", v);
+					if (v & (1 << 7)) {
+						v |= ((1 << 8) - 1) << 8;
+					}
 					i++;
 				}
+				printf("mov ax, [%hd]\n", v);
 				continue;
 			}
 
 			case ACM_MEM: {
 				if (buf[i] & 1) {
 					i16 v = buf[i+1] + ((int)buf[i+2] << 8);
-					printf("mov [%hu], ax", v);
+					printf("mov [%hu], ax\n", v);
 					i += 2;
 				} else {
 					u8 v = buf[i+1];
-					printf("mov [%hhu], ax", v);
+					printf("mov [%hhu], ax\n", v);
 					i++;
 				}
 				continue;
@@ -167,8 +194,8 @@ int main(int argc, char **argv) {
 						} else {
 							dis = buf[i+1];
 							i += 1;
-							if (dis & 0b1000) {
-								dis |= 0b1111 << 4;
+							if (dis & (1 << 7)) {
+								dis |= ((1 << 8) - 1) << 8;
 							}
 						}
 						if (dw & 0b10) {
@@ -193,7 +220,7 @@ int main(int argc, char **argv) {
 
 		switch (buf[i] >> 4) {
 			case IMD_REG: {
-				u16 v;
+				i16 v;
 				u8 reg = buf[i] & 0b111;
 				u8 is_wide = (buf[i]&0b1000) >> 3;
 				if (buf[i] & 0b1000) {
@@ -202,8 +229,11 @@ int main(int argc, char **argv) {
 				} else {
 					v = buf[i+1]; 
 					i += 1;
+					if (v & (1 << 7)) {
+						v |= ((1 << 8) - 1) << 8;
+					}
 				}
-				printf("mov %s, %hu\n", regNames[is_wide][reg], v);
+				printf("mov %s, %hd\n", regNames[is_wide][reg], v);
 				continue;
 			}
 		}

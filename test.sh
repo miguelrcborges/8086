@@ -11,8 +11,8 @@ for asm_file in *.asm; do
 
     nasm -o "${base_name}_dis.bin" "${base_name}_dis.asm" || { echo "Failed to compile disassembled output of $asm_file."; continue; }
 
-    original_sha=$(sum "${base_name}_og.bin" | cut -d ' ' -f 1)
-    disassemble_sha=$(sum "${base_name}_dis.bin" | cut -d ' ' -f 1)
+    original_sha=$(sha256sum "${base_name}_og.bin" | cut -d ' ' -f 1)
+    disassemble_sha=$(sha256sum "${base_name}_dis.bin" | cut -d ' ' -f 1)
 
     if [[ "$original_sha" == "$disassemble_sha" ]]; then
         echo "$asm_file PASSED"

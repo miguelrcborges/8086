@@ -3,9 +3,9 @@
 
 typedef unsigned char OPCODE;
 enum _OPCODE_7bit_header {
-	IMD_MEMREG = 0b110011,
-	MEM_ACM = 0b1010000,
-	ACM_MEM = 0b1010001,
+	IMD_MEMREG = 0b1100011,
+	MEM_ACM	   = 0b1010000,
+	ACM_MEM    = 0b1010001,
 };
 
 enum _OPCODE_6bit_header {
