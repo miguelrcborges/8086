@@ -9,7 +9,7 @@ for asm_file in *.asm; do
 
     ../disass "${base_name}_og.bin" > "${base_name}_dis.asm"
 
-    nasm -o "${base_name}_dis.bin" "${base_name}_dis.asm" || { echo "Failed to compile disassembled output of $asm_file."; continue; }
+    nasm -o "${base_name}_dis.bin" "${base_name}_dis.asm" > /dev/null 2>&1 || { echo "Failed to compile disassembled output of $asm_file."; continue; }
 
     original_sha=$(sha256sum "${base_name}_og.bin" | cut -d ' ' -f 1)
     disassemble_sha=$(sha256sum "${base_name}_dis.bin" | cut -d ' ' -f 1)
@@ -23,4 +23,4 @@ for asm_file in *.asm; do
     rm -f "${base_name}_og.bin" "${base_name}_dis.asm" "${base_name}_dis.bin"
 done
 
-cd -
+cd - > /dev/null 2>&1
